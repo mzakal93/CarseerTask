@@ -1,4 +1,6 @@
+using CarseerTask.Models;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 namespace CarseerTask.Controllers
 {
@@ -43,8 +45,13 @@ namespace CarseerTask.Controllers
                     {
                         // Read the content of the response as a string
                         var apiResponse = await response.Content.ReadAsStringAsync();
-                        // return the result 
-                        return Ok(apiResponse);
+                        // Deserialize the API response into the RootObject
+                        RootObject DeserializedResult = JsonConvert.DeserializeObject<RootObject>(apiResponse);
+                        // Select The Model Name of Cars
+                        var res = new ModelResult { Models = DeserializedResult.Results.Select(r => r.Model_Name).ToArray() };
+
+                        // return the result
+                        return Ok(res);
                     }
                     else
                     {
