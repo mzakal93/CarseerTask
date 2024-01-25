@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace CarseerTask.Controllers
 {
@@ -10,26 +9,34 @@ namespace CarseerTask.Controllers
         private readonly ILogger<CarseerTaskController> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment _environment;
+        private readonly CarMakeCsvHelper _carMakeCsvHelper;
 
-        public CarseerTaskController(ILogger<CarseerTaskController> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory)
+        public CarseerTaskController(ILogger<CarseerTaskController> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory, IWebHostEnvironment environment)
         {
             _logger = logger;
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
+            _environment = environment;
+            _carMakeCsvHelper = new CarMakeCsvHelper(configuration, environment);
         }
 
-        [HttpGet(Name = "GetModelsByMakeNameAndYear")]
+        [HttpGet()]
+        [Route("api/models")]
         public async Task<IActionResult> GetModelsByMakeNameAndYear([FromQuery] int modelYear, [FromQuery] string make)
         {
             try
-            { 
+            {
+                // get carMakeId from Car Name
+                var carMakeId = _carMakeCsvHelper.GetMakeIdByMakeName(make);
+
                 // Retrieve the base URL of the Models API from configuration
                 var modelsApiBaseUrl = _configuration["ApiSetting:GetModelsForMakeIdYearAPI"];
 
                 using (HttpClient httpClient = _httpClientFactory.CreateClient())
                 {
                     // Make a GET request to the Models API
-                    HttpResponseMessage response = await httpClient.GetAsync($"{modelsApiBaseUrl}/makeId/{make}/modelyear/{modelYear}?format=json");
+                    HttpResponseMessage response = await httpClient.GetAsync($"{modelsApiBaseUrl}/makeId/{carMakeId}/modelyear/{modelYear}?format=json");
 
                     // Check if the request was successful (status code 200 OK)
                     if (response.IsSuccessStatusCode)
