@@ -1,0 +1,6 @@
+@CarseerTask_HostAddress = http://localhost:5047
+
+GET {{CarseerTask_HostAddress}}/CarseerTask/
+Accept: application/json
+
+###
