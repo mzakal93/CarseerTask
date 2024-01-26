@@ -2,69 +2,65 @@ using CarseerTask.Models;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 
-namespace CarseerTask.Controllers
+[ApiController]
+[Route("[controller]")]
+public class CarseerTaskController : ControllerBase
 {
-    [ApiController]
-    [Route("[controller]")]
-    public class CarseerTaskController : ControllerBase
+    private readonly ILogger<CarseerTaskController> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IConfiguration _configuration;
+    private readonly IWebHostEnvironment _environment;
+    private readonly ICarMakeCsvHelper _carMakeCsvHelper;
+
+    public CarseerTaskController(
+        ILogger<CarseerTaskController> logger,
+        IConfiguration configuration,
+        IHttpClientFactory httpClientFactory,
+        IWebHostEnvironment environment,
+        ICarMakeCsvHelper carMakeCsvHelper)
     {
-        private readonly ILogger<CarseerTaskController> _logger;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _configuration;
-        private readonly IWebHostEnvironment _environment;
-        private readonly CarMakeCsvHelper _carMakeCsvHelper;
+        _logger = logger;
+        _configuration = configuration;
+        _httpClientFactory = httpClientFactory;
+        _environment = environment;
+        _carMakeCsvHelper = carMakeCsvHelper;
+    }
 
-        public CarseerTaskController(ILogger<CarseerTaskController> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory, IWebHostEnvironment environment)
+    [HttpGet]
+    [Route("api/models")]
+    public async Task<IActionResult> GetModelsByMakeNameAndYearAsync([FromQuery] int modelYear, [FromQuery] string make)
+    {
+        try
         {
-            _logger = logger;
-            _configuration = configuration;
-            _httpClientFactory = httpClientFactory;
-            _environment = environment;
-            _carMakeCsvHelper = new CarMakeCsvHelper(configuration, environment);
-        }
-
-        [HttpGet()]
-        [Route("api/models")]
-        public async Task<IActionResult> GetModelsByMakeNameAndYear([FromQuery] int modelYear, [FromQuery] string make)
-        {
-            try
+            var carMakeId = _carMakeCsvHelper.GetMakeIdByMakeName(make);
+            if (!carMakeId.HasValue)
             {
-                // get carMakeId from Car Name
-                var carMakeId = _carMakeCsvHelper.GetMakeIdByMakeName(make);
+                return BadRequest($"Car name '{make}' is not valid.");
+            }
+            var modelsApiBaseUrl = _configuration["ApiSetting:GetModelsForMakeIdYearAPI"];
 
-                // Retrieve the base URL of the Models API from configuration
-                var modelsApiBaseUrl = _configuration["ApiSetting:GetModelsForMakeIdYearAPI"];
+            using (HttpClient httpClient = _httpClientFactory.CreateClient())
+            {
+                HttpResponseMessage response = await httpClient.GetAsync($"{modelsApiBaseUrl}/makeId/{carMakeId}/modelyear/{modelYear}?format=json");
 
-                using (HttpClient httpClient = _httpClientFactory.CreateClient())
+                if (response.IsSuccessStatusCode)
                 {
-                    // Make a GET request to the Models API
-                    HttpResponseMessage response = await httpClient.GetAsync($"{modelsApiBaseUrl}/makeId/{carMakeId}/modelyear/{modelYear}?format=json");
+                    var apiResponse = await response.Content.ReadAsStringAsync();
+                    var deserializedResult = JsonConvert.DeserializeObject<RootObject>(apiResponse);
 
-                    // Check if the request was successful (status code 200 OK)
-                    if (response.IsSuccessStatusCode)
-                    {
-                        // Read the content of the response as a string
-                        var apiResponse = await response.Content.ReadAsStringAsync();
-                        // Deserialize the API response into the RootObject
-                        RootObject DeserializedResult = JsonConvert.DeserializeObject<RootObject>(apiResponse);
-                        // Select The Model Name of Cars
-                        var res = new ModelResult { Models = DeserializedResult.Results.Select(r => r.Model_Name).ToArray() };
-
-                        // return the result
-                        return Ok(res);
-                    }
-                    else
-                    {
-                        // If the request was not successful, return an appropriate error response
-                        return StatusCode((int)response.StatusCode, $"Error: {response.ReasonPhrase}");
-                    }
+                    var res = new ModelResult { Models = deserializedResult.Results.Select(r => r.Model_Name).ToArray() };
+                    return Ok(res);
+                }
+                else
+                {
+                    return StatusCode((int)response.StatusCode, $"Error: {response.ReasonPhrase}");
                 }
             }
-            catch (Exception ex)
-            {
-                // Handle any exceptions that may occur during the request
-                return StatusCode(500, $"Internal Server Error: {ex.Message}");
-            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred during the request");
+            return StatusCode(500, "Internal Server Error");
         }
     }
 }
