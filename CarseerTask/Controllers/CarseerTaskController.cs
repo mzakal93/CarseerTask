@@ -9,20 +9,17 @@ public class CarseerTaskController : ControllerBase
     private readonly ILogger<CarseerTaskController> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
-    private readonly IWebHostEnvironment _environment;
     private readonly ICarMakeCsvHelper _carMakeCsvHelper;
 
     public CarseerTaskController(
         ILogger<CarseerTaskController> logger,
         IConfiguration configuration,
         IHttpClientFactory httpClientFactory,
-        IWebHostEnvironment environment,
         ICarMakeCsvHelper carMakeCsvHelper)
     {
         _logger = logger;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
-        _environment = environment;
         _carMakeCsvHelper = carMakeCsvHelper;
     }
 
