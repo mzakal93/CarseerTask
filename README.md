@@ -11,5 +11,5 @@ Before you begin, make sure you have the following installed:
 1. **Clone the Repository:**
 
    ```bash
-   git clone [https://github.com/your-username/my-awesome-app.git](https://github.com/mzakal93/CarseerTask)https://github.com/mzakal93/CarseerTask
+   git clone [https://github.com/mzakal93/CarseerTask.git](https://github.com/mzakal93/CarseerTask)https://github.com/mzakal93/CarseerTask
    
